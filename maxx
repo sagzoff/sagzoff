@@ -1,0 +1,188 @@
+1.a.> ode 45
+
+f=@(t,y) [y(2);2*y(2)-y(1)-2];
+y0=[1;1];
+[ts,ys]=ode45(f,[0,1],y0);
+plot(ts,ys(:,1),'*','LineWidth',2)
+grid on
+
+1.b.>dsolve
+
+y=dsolve('Dy=x^3*y^2-4*y/x','y(2)=-1','x');
+x=2:0.05:3;
+z=eval(y);
+plot(x,z,'r');
+hold on
+y0=-1;
+f=@(x,y) x.^3.*y.^2-4.*y./x;
+span=[2 3];
+[x,y]=ode45(f,span,y0);
+plot(x,y,'*k')
+
+1.c.>polyfit
+
+x=[1 2 3 4 5];
+y=[1.1 2.3 5.6 6.9 7.5];
+p=polyfit(x,y,1);
+f=@(x) p(1)*x+p(2);
+plot(x,y,'*',x,f(x),'r')
+
+
+
+3.> runge_kutta
+
+function[ ]=RK4(x0,xn,y0,h,f)
+x=x0:h:xn;
+n=length(x)-1;
+y(1)=y0;
+for i=1:n
+ k1=f(x(i),y(i));
+ k2=f(x(i)+h/2,y(i)+h*k1/2);
+ k3=f(x(i)+h/2,y(i)+h*k2/2);
+ k4=f(x(i)+h,y(i)+h*k3);
+ y(i+1)=y(i)+(h/6)*(k1+2*k2+2*k3+k4);
+end
+fprintf('Approximate solution at x=%f is y=%f \n',xn,y(end))
+plot(x,y,'*')
+hold on
+u=dsolve('Dy=y-x^2+1','y(0)=.5','x');
+u=eval(u);
+fprintf('The solution obtained using dsolve at x=%f is u=%f \n',xn,u(end))
+plot(x,u,'r')
+end
+
+input::
+x0=0;y0=0.5;xn=1;h=0.25;
+f=@(x,y) y-x^2+1;
+RK4(x0,xn,y0,h,f)
+
+
+
+4.>milnes method 
+
+function []=MilnesMethod(x0,y0,xn,h,f)
+x=x0:h:xn;
+n=length(x)-1;
+y = zeros(1,n+1);
+y(1)=y0;
+for i=1:3
+ K1=f(x(i),y(i));
+ K2=f(x(i)+h/2,y(i)+h*K1/2);
+ K3=f(x(i)+h/2,y(i)+h*K2/2);
+ K4=f(x(i)+h,y(i)+h*K3);
+ y(i+1)=y(i)+(h/6)*(K1+2*K2+2*K3+K4);
+end
+for i=4:n 
+ y(i+1)=y(i-3)+(4*h/3)*(2*f(x(i),y(i))- f(x(i-1),y(i-1))+2*f(x(i-2),y(i-2))); 
+%predictor formula
+ y(i+1)=y(i-1)+(h/3)*(f(x(i+1),y(i+1))+4*f(x(i),y(i))+f(x(i-1),y(i-1))); 
+% Corrector formula
+end
+fprintf('Approximate solution at x=%f is y=%f \n',xn,y(end))
+plot(x,y,'*')
+hold on
+u=dsolve('Dy=y-x^2+1','y(0)=.5','x');
+u=eval(u);
+fprintf('The solution obtained using dsolve at x=%f is u=%f \n',xn,u(end))
+plot(x,u,'r')
+end
+
+input::
+x0=0;y0=0.5;xn=1;h=0.25;
+f=@(x,y) y-x^2+1;
+MilnesMethod(x0,y0,xn,h,f)
+
+
+
+5.>heat equation
+
+function [u] = FTCS(x0,xm,tn,h,k,c2,f)
+alpha=c2*k/h^2;
+if alpha >1/2
+ fprintf('The method fails')
+else
+x=x0:h:xm;
+m=length(x);
+t=0:k:tn;
+n=length(t);
+u=zeros(m,n);
+u(:,1)=f(x);
+for j=1:n-1
+ for i=2:m-1
+ u(i,j+1)= alpha*(u(i-1,j)+ u(i+1,j))+(1-2* alpha )*u(i,j);
+ end
+end
+surf(t,x,u)
+xlabel('t')
+ylabel('x')
+zlabel('u')
+end
+end
+
+input::
+x0=0; xm = 8; tn = 0.5; h = 1; k=1/8; c2=4;
+f = @(x) 4*x -0.5*x.^2;
+[x,t,u] = FTCS(x0,xm,tn,h,k,c2,f)
+
+
+
+explicit heat equation
+
+function[u]=heat_explicit(t0, tn, x0, xn, h, k, c)
+I = round((xn-x0)/h);
+J = round((tn-t0)/k);
+r=c*k/h^2;
+f = @(x) sin(pi*x/2);
+x = x0:h: xn;
+t = t0:k:tn;
+u = zeros(I+1, J+1);
+u(:,1) = f(x);
+u(1,:) = 0;
+u(I+1,:) = 0;
+A = diag((1+2*r) *ones (I-1,1)) -r*diag(ones (I-2,1), -1)-r*diag(ones (I-2,1),1);
+b=zeros(I-1,1);
+for j=2:J+1
+ b(1,1) = u(2,j-1)+r*u(1,j);
+ b(2:I-2,1) = u(3:I-1,j-1);
+ b(I-1,1) = u(I, j-1)+r*u(I+1,j);
+ u(2:I, j) = A\b;
+end
+%plot the results
+figure(1)
+surf(x,t,u');
+xlabel('x')
+ylabel('y')
+zlabel('u')
+title('Numerical solution of 1D heat equation')
+end
+
+
+implicit
+
+function[u] = heat_implicit(t0, tn, x0, xn, h, k, c)
+I = round((xn-x0)/h);
+J = round((tn - t0)/k);
+r = c*k/h^2;
+f = @ (x) x.*(1-x);
+x = x0:h:xn;
+t = t0:k:tn;
+u = zeros(I+1, J+1);
+u(:,1) = f(x);
+u(1, :) = 0;
+u(I+1, :) = 0;
+A = diag((1+2*r)*ones(I-1,1))-r*diag(ones(I-2,1), -1)-r*diag(ones(I-2,1),1);
+b = zeros(I-1,1);
+for j=2:J+1
+ b(1,1) = u(2,j-1)+r*u(1,j);
+ b(2:I-2,1) = u(3:I-1,j-1);
+ b(I-1,1) = u(I, j-1)+r*u(I+1,j);
+ u(2:I,j) = A\b;
+end
+%plot the results
+figure(1)
+surf(x,t,u');
+xlabel('x')
+ylabel('y')
+zlabel('u')
+title('Numerical solution of 1D heat equation')
+end
